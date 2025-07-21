@@ -18,7 +18,7 @@ st.set_page_config(
 # Load data
 @st.cache_data
 def load_data():
-    df = pd.read_excel('farmer_injuries.xlsx')
+    df = pd.read_excel('DATA.xlsx')
     return df
 
 df = load_data()
