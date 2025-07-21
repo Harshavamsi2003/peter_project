@@ -49,7 +49,7 @@ with st.sidebar:
         len(df[df['NPRS'] >= 4])/len(df)*100,
         (df[df['GLOVES']=='N']['NPRS'].mean() - df[df['GLOVES']=='Y']['NPRS'].mean())/df['NPRS'].mean()*100,
         df[[col for col in df.columns if 'SHOULDER' in col]].corrwith(df['NPRS']).abs().max(),
-        len(df[df['DOCTOR_CONSULTED']=='Y')/len(df)*100
+        len(df[df['DOCTOR_CONSULTED']=='Y'])/len(df)*100
     ))
 
 # Dashboard Overview Page
@@ -284,7 +284,7 @@ elif page == "Preventive Measures":
         (df[df['GLOVES']=='N']['NPRS'].mean() - df[df['GLOVES']=='Y']['NPRS'].mean())/df['NPRS'].mean()*100,
         df['GLOVES'].value_counts(normalize=True)['Y']*100,
         df['STRECTH'].value_counts(normalize=True)['Y']*100,
-        df[['col' for col in df.columns if 'WRIST' in col]].corrwith(df['NPRS']).abs().max(),
+        df[[col for col in df.columns if 'WRIST' in col]].corrwith(df['NPRS']).abs().max(),
         len(df[(df['NPRS'] >= 4) & (df['DOCTOR_CONSULTED']=='N')])/len(df[df['NPRS'] >= 4])*100
     ))
     
