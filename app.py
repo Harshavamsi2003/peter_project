@@ -16,7 +16,7 @@ st.set_page_config(
 @st.cache_data
 def load_data():
     # Load the dataset from CSV
-    df = pd.read_csv('farmers_data.csv')  # Assuming the data is saved as CSV
+    df = pd.read_excel("DATA.xlsx") # Assuming the data is saved as CSV
     return df
 
 df = load_data()
