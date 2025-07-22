@@ -1,275 +1,384 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import plotly.express as px
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
+import matplotlib.pyplot as plt
+import seaborn as sns
 from scipy import stats
 
 # Set page config
 st.set_page_config(
     page_title="Farmer's Upper Extremity Injury Analysis",
     page_icon="🌾",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    layout="wide"
 )
 
-# Custom CSS
-st.markdown("""
-<style>
-    .main {
-        background-color: #f8f9fa;
-    }
-    .metric-card {
-        background: white;
-        border-radius: 10px;
-        padding: 15px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        margin-bottom: 15px;
-    }
-    .insight-card {
-        background: #f0f7ff;
-        border-radius: 10px;
-        padding: 15px;
-        margin-bottom: 10px;
-        border-left: 4px solid #4285f4;
-    }
-</style>
-""", unsafe_allow_html=True)
-
-# Load data - using the exact column names from your dataset
+# Load data
 @st.cache_data
 def load_data():
-    data = {
-        'STRECTH': np.random.choice(['N', 'Y'], 200, p=[0.7, 0.3]),
-        'GLOVES': np.random.choice(['N', 'Y'], 200, p=[0.6, 0.4]),
-        'DOCTOR_CONSULTED': np.random.choice(['N', 'Y'], 200, p=[0.8, 0.2]),
-        'PAIN_KILLER': np.random.choice(['N', 'Y'], 200, p=[0.3, 0.7]),
-        'SHOULDER_FLX': np.random.randint(120, 190, 200),
-        'SHOULDER_EXTEN': np.random.randint(40, 70, 200),
-        'SHOULDER_ABD': np.random.randint(120, 190, 200),
-        'SHOULDER_ADD': np.random.randint(30, 60, 200),
-        'SHOULDER_MEDIAL': np.random.randint(70, 100, 200),
-        'SHOULDER_LATERAL': np.random.randint(70, 100, 200),
-        'ELBOW_FLEX': np.random.randint(110, 130, 200),
-        'ELBOW_EXTENSION': np.zeros(200),
-        'ELBOW_SUPI': np.random.randint(80, 100, 200),
-        'ELBOW_PORANA': np.random.randint(60, 80, 200),
-        'WRIST_FLEXN': np.random.randint(70, 80, 200),
-        'WRIST_EXTEN': np.random.randint(65, 75, 200),
-        'WRIST_ULNAR': np.random.randint(30, 40, 200),
-        'WRIST_RADIAL': np.random.randint(15, 25, 200),
-        'NPRS': np.random.randint(3, 9, 200)
-    }
-    return pd.DataFrame(data)
+    # Load the dataset
+    df = pd.read_excel("DATA.xlsx")
+    return df
 
 df = load_data()
 
-# Data preprocessing
-def preprocess_data(df):
-    # Convert binary columns to categorical
-    binary_cols = ['STRECTH', 'GLOVES', 'DOCTOR_CONSULTED', 'PAIN_KILLER']
-    for col in binary_cols:
-        df[col] = df[col].map({'Y': 'Yes', 'N': 'No'})
-    
-    # Create pain categories
-    bins = [0, 3, 6, 10]
-    labels = ['Mild (0-3)', 'Moderate (4-6)', 'Severe (7-10)']
-    df['Pain_Category'] = pd.cut(df['NPRS'], bins=bins, labels=labels)
-    return df
+# Title
+st.title("🌾 Prevalence & Risk Factors of Upper Extremities Injury in Farmers Using Spades")
 
-df = preprocess_data(df)
+# Sidebar navigation
+st.sidebar.title("Navigation")
+page = st.sidebar.radio("Select Page", [
+    "📊 Overview",
+    "🩹 Pain Analysis",
+    "⚠️ Risk Factors",
+    "💪 Range of Motion",
+    "📈 Statistical Tests",
+    "🛡️ Recommendations"
+])
 
-# Sidebar
-with st.sidebar:
-    st.title("🌾 Navigation")
-    page = st.radio("Select Page", [
-        "📊 Dashboard Overview", 
-        "📈 Pain Analysis", 
-        "⚠️ Risk Factors",
-        "💪 Range of Motion",
-        "🔍 Key Insights"
-    ])
-    
-    st.title("🔧 Filters")
-    min_pain, max_pain = st.slider(
-        "Select Pain Score Range (NPRS)",
-        min_value=0, max_value=10, value=(3, 8)
-    )
-    
-    selected_factors = st.multiselect(
-        "Select Risk Factors",
-        ['STRECTH', 'GLOVES', 'DOCTOR_CONSULTED', 'PAIN_KILLER'],
-        default=['GLOVES']
-    )
+# Sidebar filters (available on all pages)
+st.sidebar.header("Filters")
+pain_threshold = st.sidebar.slider("Filter by Pain Score (NPRS)", 0, 10, (0, 10))
+filtered_df = df[(df['NPRS'] >= pain_threshold[0]) & (df['NPRS'] <= pain_threshold[1])]
 
-# Apply filters
-filtered_df = df[(df['NPRS'] >= min_pain) & (df['NPRS'] <= max_pain)]
-
-# Dashboard Overview
-if page == "📊 Dashboard Overview":
-    st.title("Farmer's Upper Extremity Injury Dashboard")
-    
-    # KPI Cards
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.markdown('<div class="metric-card"><h3>👨‍🌾 Total Farmers</h3><h1 style="color:#4285f4">{}</h1></div>'.format(len(df)), unsafe_allow_html=True)
-    with col2:
-        st.markdown('<div class="metric-card"><h3>🌡️ Average Pain</h3><h1 style="color:#4285f4">{:.1f}/10</h1></div>'.format(df['NPRS'].mean()), unsafe_allow_html=True)
-    with col3:
-        st.markdown('<div class="metric-card"><h3>💊 Pain Killer Use</h3><h1 style="color:#4285f4">{:.1f}%</h1></div>'.format(df['PAIN_KILLER'].value_counts(normalize=True)['Yes']*100), unsafe_allow_html=True)
-    with col4:
-        st.markdown('<div class="metric-card"><h3>🏥 Doctor Consulted</h3><h1 style="color:#4285f4">{:.1f}%</h1></div>'.format(df['DOCTOR_CONSULTED'].value_counts(normalize=True)['Yes']*100), unsafe_allow_html=True)
-    
-    # Pain Distribution
-    st.subheader("Pain Distribution")
-    fig = px.histogram(filtered_df, x='NPRS', nbins=11, 
-                      title='Distribution of Pain Scores',
-                      labels={'NPRS': 'Pain Score (0-10)'})
-    st.plotly_chart(fig, use_container_width=True)
-    
-    # Risk Factor Overview
-    st.subheader("Risk Factor Overview")
-    fig = go.Figure()
-    for factor in ['STRECTH', 'GLOVES', 'DOCTOR_CONSULTED', 'PAIN_KILLER']:
-        grouped = filtered_df.groupby(factor)['NPRS'].mean().reset_index()
-        fig.add_trace(go.Bar(
-            x=grouped[factor],
-            y=grouped['NPRS'],
-            name=factor
-        ))
-    fig.update_layout(barmode='group', title='Average Pain Score by Risk Factor')
-    st.plotly_chart(fig, use_container_width=True)
-
-# Pain Analysis
-elif page == "📈 Pain Analysis":
-    st.title("Pain Characteristics Analysis")
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        st.subheader("Pain Score Distribution")
-        fig = px.histogram(filtered_df, x='NPRS', nbins=11,
-                         labels={'NPRS': 'Pain Score (0-10)'})
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        st.subheader("Pain Severity Categories")
-        severity_counts = filtered_df['Pain_Category'].value_counts()
-        fig = px.pie(severity_counts, values=severity_counts.values, 
-                    names=severity_counts.index)
-        st.plotly_chart(fig, use_container_width=True)
-    
-    st.subheader("Pain Score Statistics")
-    stats_df = filtered_df['NPRS'].describe().to_frame().T
-    st.dataframe(stats_df.style.format("{:.2f}"), use_container_width=True)
-
-# Risk Factors
-elif page == "⚠️ Risk Factors":
-    st.title("Risk Factor Analysis")
-    
-    if not selected_factors:
-        st.warning("Please select at least one risk factor from the sidebar")
-    else:
-        for factor in selected_factors:
-            st.subheader(f"Analysis of {factor}")
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                fig = px.box(filtered_df, x=factor, y='NPRS',
-                           title=f'Pain Scores by {factor}')
-                st.plotly_chart(fig, use_container_width=True)
-            
-            with col2:
-                factor_dist = filtered_df[factor].value_counts()
-                fig = px.pie(factor_dist, values=factor_dist.values,
-                            names=factor_dist.index,
-                            title=f'{factor} Distribution')
-                st.plotly_chart(fig, use_container_width=True)
-            
-            # Statistical test
-            groups = [filtered_df[filtered_df[factor] == val]['NPRS'] 
-                     for val in filtered_df[factor].unique()]
-            
-            if len(groups) == 2:
-                t_stat, p_val = stats.ttest_ind(*groups, equal_var=False)
-                st.markdown(f"""
-                <div class="insight-card">
-                    <h4>Statistical Significance</h4>
-                    <p>Independent t-test between {factor} groups:</p>
-                    <p><b>t-statistic:</b> {t_stat:.3f}</p>
-                    <p><b>p-value:</b> {p_val:.3f}</p>
-                </div>
-                """, unsafe_allow_html=True)
-
-# Range of Motion
-elif page == "💪 Range of Motion":
-    st.title("Range of Motion Analysis")
-    
-    joint = st.selectbox("Select Joint", ['SHOULDER', 'ELBOW', 'WRIST'])
-    motions = [col for col in df.columns if joint in col]
-    motion = st.selectbox("Select Motion", motions)
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        fig = px.scatter(filtered_df, x=motion, y='NPRS',
-                       trendline="lowess",
-                       title=f'{motion} vs Pain Score')
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        filtered_df['Motion_Bin'] = pd.cut(filtered_df[motion], bins=5)
-        fig = px.box(filtered_df, x='Motion_Bin', y='NPRS',
-                   title=f'Pain Scores by {motion} Range')
-        st.plotly_chart(fig, use_container_width=True)
-    
-    # Correlation analysis
-    corr = filtered_df[motion].corr(filtered_df['NPRS'])
-    st.markdown(f"""
-    <div class="insight-card">
-        <h4>Correlation Analysis</h4>
-        <p>Correlation between {motion} and pain score: <b>{corr:.2f}</b></p>
+# Helper function for consistent styling
+def styled_metric(label, value, help_text=None):
+    return f"""
+    <div style="
+        border-radius: 10px;
+        padding: 15px;
+        background-color: #f0f2f6;
+        margin: 10px 0;
+    ">
+        <div style="font-size: 14px; color: #555;">{label}</div>
+        <div style="font-size: 24px; font-weight: bold; color: #333;">{value}</div>
+        {f'<div style="font-size: 12px; color: #777;">{help_text}</div>' if help_text else ''}
     </div>
-    """, unsafe_allow_html=True)
+    """
 
-# Key Insights
-elif page == "🔍 Key Insights":
-    st.title("Key Insights & Recommendations")
+# Overview Page
+if page == "📊 Overview":
+    st.header("📊 Dataset Overview")
     
-    st.subheader("Top 10 Insights")
+    # Key metrics
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.markdown(styled_metric(
+            "Total Farmers", 
+            len(df),
+            f"Filtered: {len(filtered_df)}"
+        ), unsafe_allow_html=True)
+    with col2:
+        st.markdown(styled_metric(
+            "Average Pain Score", 
+            f"{df['NPRS'].mean():.1f}/10",
+            f"Filtered: {filtered_df['NPRS'].mean():.1f}"
+        ), unsafe_allow_html=True)
+    with col3:
+        pain_killer_rate = df['PAIN_KILLER'].value_counts(normalize=True).get('Y', 0)*100
+        st.markdown(styled_metric(
+            "Using Pain Killers", 
+            f"{pain_killer_rate:.1f}%",
+            "Percentage of farmers"
+        ), unsafe_allow_html=True)
+    
+    # Data preview
+    st.subheader("Data Preview")
+    st.dataframe(filtered_df.head(10))
+    
+    # Pain distribution
+    st.subheader("Pain Score Distribution")
+    fig, ax = plt.subplots(figsize=(10, 4))
+    sns.histplot(data=filtered_df, x='NPRS', bins=11, kde=True, color='#4CAF50')
+    ax.set_title('Distribution of Pain Scores (NPRS 0-10)')
+    ax.set_xlabel('Pain Score')
+    ax.set_ylabel('Number of Farmers')
+    st.pyplot(fig)
+    
+    # Quick insights
+    st.subheader("🔍 Quick Insights")
     insights = [
-        "1. 🌡️ <b>75% of farmers</b> report moderate to severe pain (NPRS ≥4)",
-        "2. 🧤 Farmers <b>not using gloves</b> have 15% higher pain scores",
-        "3. 💊 <b>68% of severe pain</b> cases use pain killers",
-        "4. 🏥 Only <b>32% consulted</b> a doctor despite pain",
-        "5. 🤸 Regular stretchers show <b>12% lower</b> pain scores",
-        "6. 💪 Shoulder mobility shows <b>strongest correlation</b> with pain",
-        "7. 🦾 Limited elbow flexion linked to <b>18% higher</b> pain",
-        "8. 🎯 Wrist movements show <b>weakest correlation</b> with pain",
-        "9. 📊 Pain scores follow a <b>normal distribution</b>",
-        "10. 🛡️ Combined glove use and stretching <b>reduces pain by 20%</b>"
+        f"1. {len(df[df['NPRS'] >= 7])} farmers ({len(df[df['NPRS'] >= 7])/len(df)*100:.1f}%) experience severe pain (NPRS ≥7)",
+        f"2. Farmers using pain killers report {df[df['PAIN_KILLER']=='Y']['NPRS'].mean():.1f} average pain vs {df[df['PAIN_KILLER']=='N']['NPRS'].mean():.1f} for non-users",
+        f"3. Shoulder flexion shows {df['SHOULDER_FLX'].corr(df['NPRS']):.2f} correlation with pain scores",
+        f"4. Only {len(df[df['GLOVES']=='Y'])} farmers ({len(df[df['GLOVES']=='Y'])/len(df)*100:.1f}%) use gloves regularly"
     ]
-    
     for insight in insights:
-        st.markdown(f'<div class="insight-card">{insight}</div>', unsafe_allow_html=True)
+        st.markdown(f"<div style='padding: 10px; background-color: #f8f9fa; border-left: 4px solid #4CAF50; margin: 5px 0;'>{insight}</div>", unsafe_allow_html=True)
+
+# Pain Analysis Page
+elif page == "🩹 Pain Analysis":
+    st.header("🩹 Detailed Pain Analysis")
     
-    st.subheader("Recommendations")
-    recommendations = [
-        "✅ Implement <b>mandatory glove use</b> programs",
-        "✅ Develop <b>farmer-specific stretching</b> routines",
-        "✅ Provide <b>early medical consultation</b> education",
-        "✅ Design <b>ergonomic spade handles</b>",
-        "✅ Create <b>shoulder strengthening</b> programs",
-        "✅ Establish <b>regular pain assessment</b> protocols"
+    # Pain score distribution by category
+    st.subheader("Pain Score Distribution by Factors")
+    factor = st.selectbox("Select factor to analyze", 
+                         ['PAIN_KILLER', 'GLOVES', 'DOCTOR_CONSULTED', 'STRECTH'])
+    
+    fig, ax = plt.subplots(figsize=(10, 5))
+    sns.boxplot(data=filtered_df, x=factor, y='NPRS', palette='Set2')
+    ax.set_title(f'Pain Score Distribution by {factor}')
+    ax.set_xlabel(factor)
+    ax.set_ylabel('Pain Score (NPRS)')
+    st.pyplot(fig)
+    
+    # Pain score statistics
+    st.subheader("Pain Score Statistics")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("**Overall Statistics**")
+        overall_stats = filtered_df['NPRS'].describe().to_frame()
+        st.dataframe(overall_stats.style.format("{:.2f}"))
+    
+    with col2:
+        st.markdown(f"**Statistics by {factor}**")
+        group_stats = filtered_df.groupby(factor)['NPRS'].agg(['mean', 'median', 'std', 'count'])
+        st.dataframe(group_stats.style.format("{:.2f}"))
+    
+    # Pain score trends
+    st.subheader("Pain Score Trends")
+    motion_type = st.selectbox("Select motion to analyze", 
+                              ['SHOULDER_FLX', 'SHOULDER_EXTEN', 'ELBOW_FLEX', 'WRIST_FLEXN'])
+    
+    fig, ax = plt.subplots(figsize=(10, 5))
+    sns.regplot(data=filtered_df, x=motion_type, y='NPRS', scatter_kws={'alpha':0.5}, line_kws={'color':'red'})
+    ax.set_title(f'Pain Scores vs {motion_type}')
+    ax.set_xlabel(f'{motion_type} (degrees)')
+    ax.set_ylabel('Pain Score (NPRS)')
+    st.pyplot(fig)
+    
+    # Calculate correlation
+    corr = filtered_df[motion_type].corr(filtered_df['NPRS'])
+    st.markdown(f"**Correlation coefficient:** {corr:.2f}")
+    if corr > 0.3:
+        st.info("Moderate positive correlation - Higher values may be associated with more pain")
+    elif corr < -0.3:
+        st.info("Moderate negative correlation - Lower values may be associated with more pain")
+    else:
+        st.info("Weak or no correlation observed")
+
+# Risk Factors Page
+elif page == "⚠️ Risk Factors":
+    st.header("⚠️ Risk Factor Analysis")
+    
+    # Binary risk factors
+    st.subheader("Binary Risk Factors")
+    binary_factors = ['STRECTH', 'GLOVES', 'DOCTOR_CONSULTED', 'PAIN_KILLER']
+    
+    cols = st.columns(2)
+    for i, factor in enumerate(binary_factors):
+        with cols[i%2]:
+            st.markdown(f"**{factor.replace('_', ' ').title()}**")
+            if factor in filtered_df.columns:
+                # Calculate percentages
+                counts = filtered_df[factor].value_counts(normalize=True)
+                
+                # Create pie chart
+                fig, ax = plt.subplots(figsize=(5, 3))
+                counts.plot(kind='pie', autopct='%1.1f%%', colors=['#ff9999','#66b3ff'], ax=ax)
+                ax.set_ylabel('')
+                st.pyplot(fig)
+                
+                # Calculate mean NPRS difference
+                if len(counts) > 1:
+                    mean_diff = filtered_df[filtered_df[factor]=='Y']['NPRS'].mean() - filtered_df[filtered_df[factor]=='N']['NPRS'].mean()
+                    st.markdown(f"Mean NPRS difference: {mean_diff:.2f}")
+    
+    # Range of motion factors
+    st.subheader("Range of Motion Risk Factors")
+    motion_factors = [col for col in df.columns if any(x in col for x in ['SHOULDER', 'ELBOW', 'WRIST'])]
+    selected_motion = st.selectbox("Select motion factor", motion_factors)
+    
+    # Create bins for analysis
+    filtered_df['motion_bin'] = pd.cut(filtered_df[selected_motion], bins=5)
+    
+    fig, ax = plt.subplots(figsize=(10, 5))
+    sns.boxplot(data=filtered_df, x='motion_bin', y='NPRS', palette='coolwarm')
+    ax.set_title(f'Pain Scores by {selected_motion} Range')
+    ax.set_xlabel(f'{selected_motion} Range (degrees)')
+    ax.set_ylabel('Pain Score (NPRS)')
+    plt.xticks(rotation=45)
+    st.pyplot(fig)
+    
+    # ANOVA test
+    groups = [filtered_df[filtered_df['motion_bin'] == bin]['NPRS'] for bin in filtered_df['motion_bin'].unique()]
+    f_stat, p_val = stats.f_oneway(*groups)
+    
+    st.markdown(f"**ANOVA Test Results for {selected_motion}:**")
+    st.markdown(f"- F-statistic: {f_stat:.3f}")
+    st.markdown(f"- p-value: {p_val:.3f}")
+    if p_val < 0.05:
+        st.success("Statistically significant differences exist between motion ranges (p < 0.05)")
+    else:
+        st.warning("No statistically significant differences found (p ≥ 0.05)")
+
+# Range of Motion Page
+elif page == "💪 Range of Motion":
+    st.header("💪 Range of Motion Analysis")
+    
+    # Select joint to analyze
+    joint = st.radio("Select Joint", ['Shoulder', 'Elbow', 'Wrist'])
+    
+    if joint == 'Shoulder':
+        motions = ['SHOULDER_FLX', 'SHOULDER_EXTEN', 'SHOULDER_ABD', 'SHOULDER_ADD', 'SHOULDER_MEDIAL', 'SHOULDER_LATERAL']
+    elif joint == 'Elbow':
+        motions = ['ELBOW_FLEX', 'ELBOW_EXTENSION', 'ELBOW_SUPI', 'ELBOW_PORANA']
+    else:
+        motions = ['WRIST_FLEXN', 'WRIST_EXTEN', 'WRIST_ULNAR', 'WRIST_RADIAL']
+    
+    # Motion vs pain correlation matrix
+    st.subheader(f"{joint} Motion Correlations with Pain")
+    corr_matrix = filtered_df[motions + ['NPRS']].corr()
+    
+    fig, ax = plt.subplots(figsize=(10, 6))
+    sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', center=0, ax=ax)
+    ax.set_title(f'Correlation Between {joint} Motions and Pain Score')
+    st.pyplot(fig)
+    
+    # Detailed motion analysis
+    st.subheader("Detailed Motion Analysis")
+    selected_motion = st.selectbox("Select specific motion", motions)
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("**Motion Distribution**")
+        fig, ax = plt.subplots(figsize=(8, 4))
+        sns.histplot(filtered_df[selected_motion], kde=True, color='#4CAF50', bins=15)
+        ax.set_xlabel('Degrees of Motion')
+        st.pyplot(fig)
+    
+    with col2:
+        st.markdown("**Motion vs Pain**")
+        fig, ax = plt.subplots(figsize=(8, 4))
+        sns.scatterplot(data=filtered_df, x=selected_motion, y='NPRS', alpha=0.6, color='#2196F3')
+        ax.set_xlabel('Degrees of Motion')
+        ax.set_ylabel('Pain Score')
+        st.pyplot(fig)
+    
+    # Motion statistics
+    st.markdown("**Motion Statistics**")
+    motion_stats = filtered_df[selected_motion].describe().to_frame()
+    st.dataframe(motion_stats.style.format("{:.2f}"))
+
+# Statistical Tests Page
+elif page == "📈 Statistical Tests":
+    st.header("📈 Statistical Analysis")
+    
+    # T-test for binary factors
+    st.subheader("T-tests for Binary Factors")
+    binary_factor = st.selectbox("Select binary factor", 
+                                ['GLOVES', 'PAIN_KILLER', 'DOCTOR_CONSULTED', 'STRECTH'])
+    
+    if len(filtered_df[binary_factor].unique()) == 2:
+        group1 = filtered_df[filtered_df[binary_factor] == filtered_df[binary_factor].unique()[0]]['NPRS']
+        group2 = filtered_df[filtered_df[binary_factor] == filtered_df[binary_factor].unique()[1]]['NPRS']
+        
+        # Display group statistics
+        st.markdown(f"**Group Statistics for {binary_factor}**")
+        stats_df = pd.DataFrame({
+            'Group': [filtered_df[binary_factor].unique()[0], filtered_df[binary_factor].unique()[1]],
+            'Mean NPRS': [group1.mean(), group2.mean()],
+            'Std Dev': [group1.std(), group2.std()],
+            'Count': [len(group1), len(group2)]
+        })
+        st.dataframe(stats_df)
+        
+        # Perform t-test
+        t_stat, p_val = stats.ttest_ind(group1, group2)
+        
+        st.markdown("**Independent Samples T-test Results**")
+        st.markdown(f"- t-statistic: {t_stat:.3f}")
+        st.markdown(f"- p-value: {p_val:.3f}")
+        
+        if p_val < 0.05:
+            st.success("Statistically significant difference between groups (p < 0.05)")
+            st.markdown(f"**Effect Size (Cohen's d):** {abs((group1.mean() - group2.mean()) / np.sqrt((group1.std()**2 + group2.std()**2)/2)):.2f}")
+        else:
+            st.warning("No statistically significant difference (p ≥ 0.05)")
+    else:
+        st.warning("Selected factor doesn't have exactly 2 groups for t-test")
+    
+    # ANOVA for continuous factors
+    st.subheader("ANOVA for Continuous Factors")
+    continuous_factor = st.selectbox("Select continuous factor", 
+                                   ['SHOULDER_FLX', 'SHOULDER_ABD', 'ELBOW_FLEX', 'WRIST_FLEXN'])
+    
+    # Create bins
+    filtered_df['factor_bin'] = pd.cut(filtered_df[continuous_factor], bins=5)
+    
+    # Display bin statistics
+    st.markdown(f"**Binned Statistics for {continuous_factor}**")
+    bin_stats = filtered_df.groupby('factor_bin')['NPRS'].agg(['mean', 'std', 'count'])
+    st.dataframe(bin_stats)
+    
+    # Perform ANOVA
+    groups = [filtered_df[filtered_df['factor_bin'] == bin]['NPRS'] for bin in filtered_df['factor_bin'].unique()]
+    f_stat, p_val = stats.f_oneway(*groups)
+    
+    st.markdown("**ANOVA Results**")
+    st.markdown(f"- F-statistic: {f_stat:.3f}")
+    st.markdown(f"- p-value: {p_val:.3f}")
+    
+    if p_val < 0.05:
+        st.success("Statistically significant differences between groups (p < 0.05)")
+    else:
+        st.warning("No statistically significant differences (p ≥ 0.05)")
+
+# Recommendations Page
+elif page == "🛡️ Recommendations":
+    st.header("🛡️ Preventive Measures & Recommendations")
+    
+    # Key findings
+    st.subheader("Key Findings Summary")
+    
+    findings = [
+        ("1. High Pain Prevalence", f"{len(df[df['NPRS'] >= 5])/len(df)*100:.1f}% of farmers report moderate to severe pain (NPRS ≥5)"),
+        ("2. Protective Effect of Gloves", f"Glove users report {df[df['GLOVES']=='Y']['NPRS'].mean():.1f} vs {df[df['GLOVES']=='N']['NPRS'].mean():.1f} average pain for non-users"),
+        ("3. Shoulder Mobility", f"Shoulder flexion shows {df['SHOULDER_FLX'].corr(df['NPRS']):.2f} correlation with pain scores"),
+        ("4. Pain Medication Use", f"{df['PAIN_KILLER'].value_counts(normalize=True).get('Y', 0)*100:.1f}% use pain killers regularly"),
+        ("5. Doctor Consultations", f"Only {df['DOCTOR_CONSULTED'].value_counts(normalize=True).get('Y', 0)*100:.1f}% have consulted a doctor")
     ]
     
-    for rec in recommendations:
-        st.markdown(f'<div style="background:#e6f4ea;padding:12px;border-radius:8px;margin:8px 0;">{rec}</div>', unsafe_allow_html=True)
+    for title, content in findings:
+        with st.expander(title):
+            st.markdown(content)
+    
+    # Recommendations
+    st.subheader("Evidence-Based Recommendations")
+    
+    recommendations = [
+        ("👐 Promote Glove Usage", "Farmers not using gloves report higher pain scores. Provide ergonomic gloves to reduce strain."),
+        ("🏋️ Shoulder Strengthening", "Targeted exercises to improve shoulder mobility may reduce pain based on correlation analysis."),
+        ("💊 Reduce Pain Killer Reliance", "High usage suggests underlying issues need addressing rather than symptomatic treatment."),
+        ("🩺 Encourage Medical Consultations", "Low consultation rates indicate potential under-treatment of chronic issues."),
+        ("🧘 Implement Stretching Programs", "Regular stretching may help prevent repetitive strain injuries.")
+    ]
+    
+    for title, content in recommendations:
+        with st.expander(title):
+            st.markdown(content)
+    
+    # Implementation plan
+    st.subheader("Suggested Implementation Plan")
+    st.markdown("""
+    1. **Short-term (0-3 months):**
+       - Distribute ergonomic gloves to all farmers
+       - Conduct pain awareness workshops
+       
+    2. **Medium-term (3-6 months):**
+       - Implement on-site stretching programs
+       - Arrange regular medical check-ups
+       
+    3. **Long-term (6+ months):**
+       - Develop farmer-specific exercise programs
+       - Establish ongoing monitoring system
+    """)
 
 # Footer
 st.markdown("---")
 st.markdown("""
-<div style="text-align: center; padding: 20px;">
-    <p>Farmer Upper Extremity Injury Analysis Dashboard</p>
-    <p>© 2023 | Developed for Research Purposes</p>
-</div>
-""", unsafe_allow_html=True)
+**About This Dashboard:**  
+This interactive tool analyzes upper extremity injuries in farmers using spades, with objectives to:
+1. Assess pain frequency
+2. Identify risk factors
+3. Suggest preventive measures
+""")
