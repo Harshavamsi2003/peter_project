@@ -620,7 +620,7 @@ elif page == "⏱️ Work Patterns":
     # Statistical test for affected area
     st.subheader("Statistical Analysis for Affected Area")
 
-        st.markdown("""
+    st.markdown("""
     **ANOVA Results for Affected Area vs Pain Score:**
     
     - **F-statistic:** 4.039
