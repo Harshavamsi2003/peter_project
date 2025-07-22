@@ -201,11 +201,12 @@ elif page == "⚠️ Risk Factors":
     
     # Create bins for analysis
     filtered_df['motion_bin'] = pd.cut(filtered_df[selected_motion], bins=5)
+    filtered_df['motion_bin_str'] = filtered_df['motion_bin'].astype(str)  # Convert to string for Plotly
     
-    fig = px.box(filtered_df, x='motion_bin', y='NPRS', 
+    fig = px.box(filtered_df, x='motion_bin_str', y='NPRS', 
                 title=f'Pain Scores by {selected_motion} Range',
-                labels={'motion_bin': f'{selected_motion} Range (degrees)', 'NPRS': 'Pain Score'},
-                color='motion_bin')
+                labels={'motion_bin_str': f'{selected_motion} Range (degrees)', 'NPRS': 'Pain Score'},
+                color='motion_bin_str')
     fig.update_traces(hovertemplate="Range: %{x}<br>Pain Score: %{y}")
     st.plotly_chart(fig, use_container_width=True)
     
@@ -325,10 +326,11 @@ elif page == "📈 Statistical Tests":
     
     # Create bins
     filtered_df['factor_bin'] = pd.cut(filtered_df[continuous_factor], bins=5)
+    filtered_df['factor_bin_str'] = filtered_df['factor_bin'].astype(str)  # Convert to string for display
     
     # Display bin statistics
     st.markdown(f"**Binned Statistics for {continuous_factor}**")
-    bin_stats = filtered_df.groupby('factor_bin')['NPRS'].agg(['mean', 'std', 'count'])
+    bin_stats = filtered_df.groupby('factor_bin_str')['NPRS'].agg(['mean', 'std', 'count'])
     st.dataframe(bin_stats)
     
     # Perform ANOVA
