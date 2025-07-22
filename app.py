@@ -4,8 +4,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy import stats
-import plotly.express as px
-import plotly.graph_objects as go
 
 # Set page config
 st.set_page_config(
@@ -35,7 +33,7 @@ page = st.sidebar.radio("Select Page", [
     "💪 Range of Motion",
     "📈 Statistical Tests",
     "🛡️ Recommendations",
-    "⏱️ Work Patterns"
+    "⏱️ Work Patterns"  # New page for work pattern analysis
 ])
 
 # Sidebar filters (available on all pages)
@@ -88,14 +86,14 @@ if page == "📊 Overview":
     st.subheader("Data Preview")
     st.dataframe(filtered_df.head(10))
     
-    # Pain distribution - using Plotly for interactivity
+    # Pain distribution
     st.subheader("Pain Score Distribution")
-    fig = px.histogram(filtered_df, x='NPRS', nbins=11, 
-                      title='Distribution of Pain Scores (NPRS 0-10)',
-                      labels={'NPRS': 'Pain Score', 'count': 'Number of Farmers'},
-                      color_discrete_sequence=['#4CAF50'])
-    fig.update_layout(bargap=0.1)
-    st.plotly_chart(fig, use_container_width=True)
+    fig, ax = plt.subplots(figsize=(10, 4))
+    sns.histplot(data=filtered_df, x='NPRS', bins=11, kde=True, color='#4CAF50')
+    ax.set_title('Distribution of Pain Scores (NPRS 0-10)')
+    ax.set_xlabel('Pain Score')
+    ax.set_ylabel('Number of Farmers')
+    st.pyplot(fig)
     
     # Quick insights
     st.subheader("🔍 Quick Insights")
@@ -117,11 +115,12 @@ elif page == "🩹 Pain Analysis":
     factor = st.selectbox("Select factor to analyze", 
                          ['PAIN_KILLER', 'GLOVES', 'DOCTOR_CONSULTED', 'STRECTH'])
     
-    fig = px.box(filtered_df, x=factor, y='NPRS', 
-                title=f'Pain Score Distribution by {factor}',
-                labels={'NPRS': 'Pain Score (NPRS)', factor: factor},
-                color=factor, color_discrete_sequence=px.colors.qualitative.Set2)
-    st.plotly_chart(fig, use_container_width=True)
+    fig, ax = plt.subplots(figsize=(10, 5))
+    sns.boxplot(data=filtered_df, x=factor, y='NPRS', palette='Set2')
+    ax.set_title(f'Pain Score Distribution by {factor}')
+    ax.set_xlabel(factor)
+    ax.set_ylabel('Pain Score (NPRS)')
+    st.pyplot(fig)
     
     # Pain score statistics
     st.subheader("Pain Score Statistics")
@@ -136,17 +135,17 @@ elif page == "🩹 Pain Analysis":
         group_stats = filtered_df.groupby(factor)['NPRS'].agg(['mean', 'median', 'std', 'count'])
         st.dataframe(group_stats.style.format("{:.2f}"))
     
-    # Pain score trends - using Plotly for interactivity
+    # Pain score trends
     st.subheader("Pain Score Trends")
     motion_type = st.selectbox("Select motion to analyze", 
                               ['SHOULDER_FLX', 'SHOULDER_EXTEN', 'ELBOW_FLEX', 'WRIST_FLEXN'])
     
-    fig = px.scatter(filtered_df, x=motion_type, y='NPRS', 
-                    trendline="ols",
-                    title=f'Pain Scores vs {motion_type}',
-                    labels={motion_type: f'{motion_type} (degrees)', 'NPRS': 'Pain Score (NPRS)'},
-                    hover_data=filtered_df.columns)
-    st.plotly_chart(fig, use_container_width=True)
+    fig, ax = plt.subplots(figsize=(10, 5))
+    sns.regplot(data=filtered_df, x=motion_type, y='NPRS', scatter_kws={'alpha':0.5}, line_kws={'color':'red'})
+    ax.set_title(f'Pain Scores vs {motion_type}')
+    ax.set_xlabel(f'{motion_type} (degrees)')
+    ax.set_ylabel('Pain Score (NPRS)')
+    st.pyplot(fig)
     
     # Calculate correlation
     corr = filtered_df[motion_type].corr(filtered_df['NPRS'])
@@ -172,18 +171,13 @@ elif page == "⚠️ Risk Factors":
             st.markdown(f"**{factor.replace('_', ' ').title()}**")
             if factor in filtered_df.columns:
                 # Calculate percentages
-                counts = filtered_df[factor].value_counts(normalize=True).reset_index()
-                counts.columns = [factor, 'percentage']
-                counts['percentage'] = counts['percentage'] * 100
+                counts = filtered_df[factor].value_counts(normalize=True)
                 
-                # Create pie chart with Plotly
-                fig = px.pie(counts, values='percentage', names=factor,
-                             title=f'Distribution of {factor}',
-                             hover_data=['percentage'],
-                             labels={'percentage': 'Percentage'},
-                             color_discrete_sequence=['#ff9999','#66b3ff'])
-                fig.update_traces(textposition='inside', textinfo='percent+label')
-                st.plotly_chart(fig, use_container_width=True)
+                # Create pie chart
+                fig, ax = plt.subplots(figsize=(5, 3))
+                counts.plot(kind='pie', autopct='%1.1f%%', colors=['#ff9999','#66b3ff'], ax=ax)
+                ax.set_ylabel('')
+                st.pyplot(fig)
                 
                 # Calculate mean NPRS difference
                 if len(counts) > 1:
@@ -198,11 +192,13 @@ elif page == "⚠️ Risk Factors":
     # Create bins for analysis
     filtered_df['motion_bin'] = pd.cut(filtered_df[selected_motion], bins=5)
     
-    fig = px.box(filtered_df, x='motion_bin', y='NPRS', 
-                title=f'Pain Scores by {selected_motion} Range',
-                labels={'NPRS': 'Pain Score (NPRS)', 'motion_bin': f'{selected_motion} Range (degrees)'},
-                color='motion_bin', color_discrete_sequence=px.colors.sequential.Cividis)
-    st.plotly_chart(fig, use_container_width=True)
+    fig, ax = plt.subplots(figsize=(10, 5))
+    sns.boxplot(data=filtered_df, x='motion_bin', y='NPRS', palette='coolwarm')
+    ax.set_title(f'Pain Scores by {selected_motion} Range')
+    ax.set_xlabel(f'{selected_motion} Range (degrees)')
+    ax.set_ylabel('Pain Score (NPRS)')
+    plt.xticks(rotation=45)
+    st.pyplot(fig)
     
     # ANOVA test
     groups = [filtered_df[filtered_df['motion_bin'] == bin]['NPRS'] for bin in filtered_df['motion_bin'].unique()]
@@ -234,16 +230,10 @@ elif page == "💪 Range of Motion":
     st.subheader(f"{joint} Motion Correlations with Pain")
     corr_matrix = filtered_df[motions + ['NPRS']].corr()
     
-    fig = px.imshow(corr_matrix,
-                   text_auto=True,
-                   aspect="auto",
-                   labels=dict(x="Variable", y="Variable", color="Correlation"),
-                   x=corr_matrix.columns,
-                   y=corr_matrix.columns,
-                   color_continuous_scale='RdBu',
-                   zmin=-1, zmax=1)
-    fig.update_layout(title=f'Correlation Between {joint} Motions and Pain Score')
-    st.plotly_chart(fig, use_container_width=True)
+    fig, ax = plt.subplots(figsize=(10, 6))
+    sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', center=0, ax=ax)
+    ax.set_title(f'Correlation Between {joint} Motions and Pain Score')
+    st.pyplot(fig)
     
     # Detailed motion analysis
     st.subheader("Detailed Motion Analysis")
@@ -252,20 +242,18 @@ elif page == "💪 Range of Motion":
     col1, col2 = st.columns(2)
     with col1:
         st.markdown("**Motion Distribution**")
-        fig = px.histogram(filtered_df, x=selected_motion, nbins=15,
-                          title=f'Distribution of {selected_motion}',
-                          labels={selected_motion: 'Degrees of Motion'},
-                          color_discrete_sequence=['#4CAF50'])
-        st.plotly_chart(fig, use_container_width=True)
+        fig, ax = plt.subplots(figsize=(8, 4))
+        sns.histplot(filtered_df[selected_motion], kde=True, color='#4CAF50', bins=15)
+        ax.set_xlabel('Degrees of Motion')
+        st.pyplot(fig)
     
     with col2:
         st.markdown("**Motion vs Pain**")
-        fig = px.scatter(filtered_df, x=selected_motion, y='NPRS',
-                        title=f'{selected_motion} vs Pain Score',
-                        labels={selected_motion: 'Degrees of Motion', 'NPRS': 'Pain Score'},
-                        trendline="lowess",
-                        color_discrete_sequence=['#2196F3'])
-        st.plotly_chart(fig, use_container_width=True)
+        fig, ax = plt.subplots(figsize=(8, 4))
+        sns.scatterplot(data=filtered_df, x=selected_motion, y='NPRS', alpha=0.6, color='#2196F3')
+        ax.set_xlabel('Degrees of Motion')
+        ax.set_ylabel('Pain Score')
+        st.pyplot(fig)
     
     # Motion statistics
     st.markdown("**Motion Statistics**")
@@ -401,13 +389,15 @@ elif page == "⏱️ Work Patterns":
     
     df['EXPERIENCE_LABEL'] = df['EXPERIENCE'].map(experience_map)
     
-    fig = px.box(df, x='EXPERIENCE_LABEL', y='NPRS', 
-                category_orders={"EXPERIENCE_LABEL": ['Less than 1 year', '1-5 years', '6-10 years', 'More than 10 years']},
-                title='Pain Scores by Farming Experience',
-                labels={'EXPERIENCE_LABEL': 'Experience Level', 'NPRS': 'Pain Score (NPRS)'},
-                color='EXPERIENCE_LABEL',
-                color_discrete_sequence=px.colors.qualitative.Vivid)
-    st.plotly_chart(fig, use_container_width=True)
+    fig, ax = plt.subplots(figsize=(10, 5))
+    sns.boxplot(data=df, x='EXPERIENCE_LABEL', y='NPRS', 
+                order=['Less than 1 year', '1-5 years', '6-10 years', 'More than 10 years'],
+                palette='viridis')
+    ax.set_title('Pain Scores by Farming Experience')
+    ax.set_xlabel('Experience Level')
+    ax.set_ylabel('Pain Score (NPRS)')
+    plt.xticks(rotation=45)
+    st.pyplot(fig)
     
     # Hours per day analysis
     st.subheader("Working Hours Analysis")
@@ -423,22 +413,26 @@ elif page == "⏱️ Work Patterns":
     
     col1, col2 = st.columns(2)
     with col1:
-        fig = px.histogram(df, x='HOURS_DAY_LABEL',
-                         category_orders={"HOURS_DAY_LABEL": ['Less than 4 hours', '4-6 hours', '7-8 hours', 'More than 9 hours']},
-                         title='Distribution of Daily Working Hours',
-                         labels={'HOURS_DAY_LABEL': 'Hours per Day', 'count': 'Number of Farmers'},
-                         color='HOURS_DAY_LABEL',
-                         color_discrete_sequence=px.colors.sequential.Blues)
-        st.plotly_chart(fig, use_container_width=True)
+        fig, ax = plt.subplots(figsize=(8, 5))
+        sns.countplot(data=df, x='HOURS_DAY_LABEL', 
+                     order=['Less than 4 hours', '4-6 hours', '7-8 hours', 'More than 9 hours'],
+                     palette='Blues')
+        ax.set_title('Distribution of Daily Working Hours')
+        ax.set_xlabel('Hours per Day')
+        ax.set_ylabel('Count')
+        plt.xticks(rotation=45)
+        st.pyplot(fig)
     
     with col2:
-        fig = px.box(df, x='HOURS_DAY_LABEL', y='NPRS',
-                    category_orders={"HOURS_DAY_LABEL": ['Less than 4 hours', '4-6 hours', '7-8 hours', 'More than 9 hours']},
-                    title='Pain Scores by Daily Working Hours',
-                    labels={'HOURS_DAY_LABEL': 'Hours per Day', 'NPRS': 'Pain Score (NPRS)'},
-                    color='HOURS_DAY_LABEL',
-                    color_discrete_sequence=px.colors.sequential.Blues)
-        st.plotly_chart(fig, use_container_width=True)
+        fig, ax = plt.subplots(figsize=(8, 5))
+        sns.boxplot(data=df, x='HOURS_DAY_LABEL', y='NPRS',
+                   order=['Less than 4 hours', '4-6 hours', '7-8 hours', 'More than 9 hours'],
+                   palette='Blues')
+        ax.set_title('Pain Scores by Daily Working Hours')
+        ax.set_xlabel('Hours per Day')
+        ax.set_ylabel('Pain Score (NPRS)')
+        plt.xticks(rotation=45)
+        st.pyplot(fig)
     
     # Break duration analysis
     st.subheader("Break Duration Analysis")
@@ -451,13 +445,14 @@ elif page == "⏱️ Work Patterns":
     
     df['HOW_LONG_BREAK_LABEL'] = df['HOW_LONG_BREAK'].map(break_map)
     
-    fig = px.box(df, x='HOW_LONG_BREAK_LABEL', y='NPRS',
-                category_orders={"HOW_LONG_BREAK_LABEL": ['Less than 5 min', '5-10 min', 'More than 10 min']},
-                title='Pain Scores by Break Duration',
-                labels={'HOW_LONG_BREAK_LABEL': 'Break Duration', 'NPRS': 'Pain Score (NPRS)'},
-                color='HOW_LONG_BREAK_LABEL',
-                color_discrete_sequence=px.colors.sequential.Teal)
-    st.plotly_chart(fig, use_container_width=True)
+    fig, ax = plt.subplots(figsize=(10, 5))
+    sns.boxplot(data=df, x='HOW_LONG_BREAK_LABEL', y='NPRS',
+               order=['Less than 5 min', '5-10 min', 'More than 10 min'],
+               palette='coolwarm')
+    ax.set_title('Pain Scores by Break Duration')
+    ax.set_xlabel('Break Duration')
+    ax.set_ylabel('Pain Score (NPRS)')
+    st.pyplot(fig)
     
     # Affected area analysis
     st.subheader("Most Affected Area Analysis")
@@ -473,22 +468,26 @@ elif page == "⏱️ Work Patterns":
     
     col1, col2 = st.columns(2)
     with col1:
-        fig = px.histogram(df, x='AREA_LABEL',
-                         category_orders={"AREA_LABEL": ['Shoulder', 'Elbow', 'Wrist', 'Multiple areas']},
-                         title='Distribution of Affected Areas',
-                         labels={'AREA_LABEL': 'Affected Area', 'count': 'Number of Farmers'},
-                         color='AREA_LABEL',
-                         color_discrete_sequence=px.colors.qualitative.Set2)
-        st.plotly_chart(fig, use_container_width=True)
+        fig, ax = plt.subplots(figsize=(8, 5))
+        sns.countplot(data=df, x='AREA_LABEL', 
+                     order=['Shoulder', 'Elbow', 'Wrist', 'Multiple areas'],
+                     palette='Set2')
+        ax.set_title('Distribution of Affected Areas')
+        ax.set_xlabel('Affected Area')
+        ax.set_ylabel('Count')
+        plt.xticks(rotation=45)
+        st.pyplot(fig)
     
     with col2:
-        fig = px.box(df, x='AREA_LABEL', y='NPRS',
-                    category_orders={"AREA_LABEL": ['Shoulder', 'Elbow', 'Wrist', 'Multiple areas']},
-                    title='Pain Scores by Affected Area',
-                    labels={'AREA_LABEL': 'Affected Area', 'NPRS': 'Pain Score (NPRS)'},
-                    color='AREA_LABEL',
-                    color_discrete_sequence=px.colors.qualitative.Set2)
-        st.plotly_chart(fig, use_container_width=True)
+        fig, ax = plt.subplots(figsize=(8, 5))
+        sns.boxplot(data=df, x='AREA_LABEL', y='NPRS',
+                   order=['Shoulder', 'Elbow', 'Wrist', 'Multiple areas'],
+                   palette='Set2')
+        ax.set_title('Pain Scores by Affected Area')
+        ax.set_xlabel('Affected Area')
+        ax.set_ylabel('Pain Score (NPRS)')
+        plt.xticks(rotation=45)
+        st.pyplot(fig)
     
     # Pain frequency analysis
     st.subheader("Pain Frequency Analysis")
@@ -502,13 +501,14 @@ elif page == "⏱️ Work Patterns":
     
     df['FREQUENTLY_LABEL'] = df['FREQUENTLY'].map(freq_map)
     
-    fig = px.histogram(df, x='FREQUENTLY_LABEL',
-                     category_orders={"FREQUENTLY_LABEL": ['Daily', 'Weekly', 'Occasionally', 'Never']},
-                     title='Distribution of Pain Frequency',
-                     labels={'FREQUENTLY_LABEL': 'Pain Frequency', 'count': 'Number of Farmers'},
-                     color='FREQUENTLY_LABEL',
-                     color_discrete_sequence=px.colors.sequential.Magma)
-    st.plotly_chart(fig, use_container_width=True)
+    fig, ax = plt.subplots(figsize=(10, 5))
+    sns.countplot(data=df, x='FREQUENTLY_LABEL', 
+                 order=['Daily', 'Weekly', 'Occasionally', 'Never'],
+                 palette='magma')
+    ax.set_title('Distribution of Pain Frequency')
+    ax.set_xlabel('Pain Frequency')
+    ax.set_ylabel('Count')
+    st.pyplot(fig)
     
     # Stiffness and numbness analysis
     st.subheader("Stiffness and Numbness Analysis")
@@ -516,25 +516,21 @@ elif page == "⏱️ Work Patterns":
     col1, col2 = st.columns(2)
     with col1:
         st.markdown("**Joint Stiffness (STIFFNESS)**")
-        stiffness_counts = df['STIFFNESS'].value_counts().reset_index()
-        stiffness_counts.columns = ['STIFFNESS', 'count']
-        fig = px.pie(stiffness_counts, values='count', names='STIFFNESS',
-                     title='Percentage of Farmers with Joint Stiffness',
-                     color_discrete_sequence=['#ff9999','#66b3ff'],
-                     hover_data=['count'])
-        fig.update_traces(textposition='inside', textinfo='percent+label')
-        st.plotly_chart(fig, use_container_width=True)
+        stiffness_counts = df['STIFFNESS'].value_counts()
+        fig, ax = plt.subplots(figsize=(6, 6))
+        ax.pie(stiffness_counts, labels=stiffness_counts.index, autopct='%1.1f%%',
+               colors=['#ff9999','#66b3ff'])
+        ax.set_title('Percentage of Farmers with Joint Stiffness')
+        st.pyplot(fig)
     
     with col2:
         st.markdown("**Hand Numbness (NUMBNESS)**")
-        numbness_counts = df['NUMBNESS'].value_counts().reset_index()
-        numbness_counts.columns = ['NUMBNESS', 'count']
-        fig = px.pie(numbness_counts, values='count', names='NUMBNESS',
-                     title='Percentage of Farmers with Hand Numbness',
-                     color_discrete_sequence=['#ff9999','#66b3ff'],
-                     hover_data=['count'])
-        fig.update_traces(textposition='inside', textinfo='percent+label')
-        st.plotly_chart(fig, use_container_width=True)
+        numbness_counts = df['NUMBNESS'].value_counts()
+        fig, ax = plt.subplots(figsize=(6, 6))
+        ax.pie(numbness_counts, labels=numbness_counts.index, autopct='%1.1f%%',
+               colors=['#ff9999','#66b3ff'])
+        ax.set_title('Percentage of Farmers with Hand Numbness')
+        st.pyplot(fig)
     
     # Statistical test for affected area
     st.subheader("Statistical Analysis for Affected Area")
