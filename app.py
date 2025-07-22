@@ -637,7 +637,7 @@ elif page == "⏱️ Work Patterns":
     3. Targeted interventions should consider the specific area affected
     """)
     
-    st.success("Statistically significant differences exist between affected areas (p < 0.05)")
+
     
     # Perform ANOVA
     groups = [df[df['AREA_LABEL'] == area]['NPRS'] for area in df['AREA_LABEL'].unique()]
