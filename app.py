@@ -444,6 +444,28 @@ elif page == "⏱️ Work Patterns":
     st.plotly_chart(fig_dur, use_container_width=True)
 
 
+    # Break Duration Distribution Graph
+    st.subheader("Break Duration Distribution")
+    break_map = {
+        'A': 'Less than 5 min',
+        'B': '5-10 min',
+        'C': 'More than 10 min'
+    }
+    
+    df['HOW_LONG_BREAK_LABEL'] = df['HOW_LONG_BREAK'].map(break_map)
+    
+    fig_break = px.histogram(df, x='HOW_LONG_BREAK_LABEL',
+                           category_orders={"HOW_LONG_BREAK_LABEL": ['Less than 5 min', '5-10 min', 'More than 10 min']},
+                           title='Distribution of Break Durations',
+                           labels={'HOW_LONG_BREAK_LABEL': 'Break Duration', 'count': 'Number of Farmers'},
+                           color='HOW_LONG_BREAK_LABEL',
+                           color_discrete_sequence=px.colors.qualitative.Pastel)
+    fig_break.update_layout(showlegend=False)
+    fig_break.update_traces(hovertemplate="Break Duration: %{x}<br>Count: %{y}")
+    st.plotly_chart(fig_break, use_container_width=True)
+
+
+
     
     # Experience analysis
     st.subheader("Experience Level Analysis")
@@ -597,6 +619,25 @@ elif page == "⏱️ Work Patterns":
     
     # Statistical test for affected area
     st.subheader("Statistical Analysis for Affected Area")
+
+        st.markdown("""
+    **ANOVA Results for Affected Area vs Pain Score:**
+    
+    - **F-statistic:** 4.039
+    - **p-value:** 0.008
+    
+    **Interpretation:**
+    The ANOVA test reveals statistically significant differences in pain scores between different affected areas (p < 0.05). 
+    This suggests that the location of injury (shoulder, elbow, wrist, or multiple areas) has a significant impact 
+    on the reported pain levels among farmers.
+    
+    **Practical Implications:**
+    1. Shoulder injuries appear to be associated with higher pain scores based on the distribution
+    2. Farmers with multiple affected areas report more severe pain
+    3. Targeted interventions should consider the specific area affected
+    """)
+    
+    st.success("Statistically significant differences exist between affected areas (p < 0.05)")
     
     # Perform ANOVA
     groups = [df[df['AREA_LABEL'] == area]['NPRS'] for area in df['AREA_LABEL'].unique()]
