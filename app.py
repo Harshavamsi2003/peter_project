@@ -32,7 +32,8 @@ page = st.sidebar.radio("Select Page", [
     "⚠️ Risk Factors",
     "💪 Range of Motion",
     "📈 Statistical Tests",
-    "🛡️ Recommendations"
+    "🛡️ Recommendations",
+    "⏱️ Work Patterns"  # New page for work pattern analysis
 ])
 
 # Sidebar filters (available on all pages)
@@ -372,6 +373,179 @@ elif page == "🛡️ Recommendations":
        - Develop farmer-specific exercise programs
        - Establish ongoing monitoring system
     """)
+
+# New Work Patterns Page
+elif page == "⏱️ Work Patterns":
+    st.header("⏱️ Work Pattern Analysis")
+    
+    # Experience analysis
+    st.subheader("Experience Level Analysis")
+    experience_map = {
+        'A': 'Less than 1 year',
+        'B': '1-5 years',
+        'C': '6-10 years',
+        'D': 'More than 10 years'
+    }
+    
+    df['EXPERIENCE_LABEL'] = df['EXPERIENCE'].map(experience_map)
+    
+    fig, ax = plt.subplots(figsize=(10, 5))
+    sns.boxplot(data=df, x='EXPERIENCE_LABEL', y='NPRS', 
+                order=['Less than 1 year', '1-5 years', '6-10 years', 'More than 10 years'],
+                palette='viridis')
+    ax.set_title('Pain Scores by Farming Experience')
+    ax.set_xlabel('Experience Level')
+    ax.set_ylabel('Pain Score (NPRS)')
+    plt.xticks(rotation=45)
+    st.pyplot(fig)
+    
+    # Hours per day analysis
+    st.subheader("Working Hours Analysis")
+    
+    hours_map = {
+        'A': 'Less than 4 hours',
+        'B': '4-6 hours',
+        'C': '7-8 hours',
+        'D': 'More than 9 hours'
+    }
+    
+    df['HOURS_DAY_LABEL'] = df['HOURS_DAY'].map(hours_map)
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        fig, ax = plt.subplots(figsize=(8, 5))
+        sns.countplot(data=df, x='HOURS_DAY_LABEL', 
+                     order=['Less than 4 hours', '4-6 hours', '7-8 hours', 'More than 9 hours'],
+                     palette='Blues')
+        ax.set_title('Distribution of Daily Working Hours')
+        ax.set_xlabel('Hours per Day')
+        ax.set_ylabel('Count')
+        plt.xticks(rotation=45)
+        st.pyplot(fig)
+    
+    with col2:
+        fig, ax = plt.subplots(figsize=(8, 5))
+        sns.boxplot(data=df, x='HOURS_DAY_LABEL', y='NPRS',
+                   order=['Less than 4 hours', '4-6 hours', '7-8 hours', 'More than 9 hours'],
+                   palette='Blues')
+        ax.set_title('Pain Scores by Daily Working Hours')
+        ax.set_xlabel('Hours per Day')
+        ax.set_ylabel('Pain Score (NPRS)')
+        plt.xticks(rotation=45)
+        st.pyplot(fig)
+    
+    # Break duration analysis
+    st.subheader("Break Duration Analysis")
+    
+    break_map = {
+        'A': 'Less than 5 min',
+        'B': '5-10 min',
+        'C': 'More than 10 min'
+    }
+    
+    df['HOW_LONG_BREAK_LABEL'] = df['HOW_LONG_BREAK'].map(break_map)
+    
+    fig, ax = plt.subplots(figsize=(10, 5))
+    sns.boxplot(data=df, x='HOW_LONG_BREAK_LABEL', y='NPRS',
+               order=['Less than 5 min', '5-10 min', 'More than 10 min'],
+               palette='coolwarm')
+    ax.set_title('Pain Scores by Break Duration')
+    ax.set_xlabel('Break Duration')
+    ax.set_ylabel('Pain Score (NPRS)')
+    st.pyplot(fig)
+    
+    # Affected area analysis
+    st.subheader("Most Affected Area Analysis")
+    
+    area_map = {
+        'A': 'Shoulder',
+        'B': 'Elbow',
+        'C': 'Wrist',
+        'D': 'Multiple areas'
+    }
+    
+    df['AREA_LABEL'] = df['AREA'].map(area_map)
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        fig, ax = plt.subplots(figsize=(8, 5))
+        sns.countplot(data=df, x='AREA_LABEL', 
+                     order=['Shoulder', 'Elbow', 'Wrist', 'Multiple areas'],
+                     palette='Set2')
+        ax.set_title('Distribution of Affected Areas')
+        ax.set_xlabel('Affected Area')
+        ax.set_ylabel('Count')
+        plt.xticks(rotation=45)
+        st.pyplot(fig)
+    
+    with col2:
+        fig, ax = plt.subplots(figsize=(8, 5))
+        sns.boxplot(data=df, x='AREA_LABEL', y='NPRS',
+                   order=['Shoulder', 'Elbow', 'Wrist', 'Multiple areas'],
+                   palette='Set2')
+        ax.set_title('Pain Scores by Affected Area')
+        ax.set_xlabel('Affected Area')
+        ax.set_ylabel('Pain Score (NPRS)')
+        plt.xticks(rotation=45)
+        st.pyplot(fig)
+    
+    # Pain frequency analysis
+    st.subheader("Pain Frequency Analysis")
+    
+    freq_map = {
+        'A': 'Daily',
+        'B': 'Weekly',
+        'C': 'Occasionally',
+        'D': 'Never'
+    }
+    
+    df['FREQUENTLY_LABEL'] = df['FREQUENTLY'].map(freq_map)
+    
+    fig, ax = plt.subplots(figsize=(10, 5))
+    sns.countplot(data=df, x='FREQUENTLY_LABEL', 
+                 order=['Daily', 'Weekly', 'Occasionally', 'Never'],
+                 palette='magma')
+    ax.set_title('Distribution of Pain Frequency')
+    ax.set_xlabel('Pain Frequency')
+    ax.set_ylabel('Count')
+    st.pyplot(fig)
+    
+    # Stiffness and numbness analysis
+    st.subheader("Stiffness and Numbness Analysis")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("**Joint Stiffness (STIFFNESS)**")
+        stiffness_counts = df['STIFFNESS'].value_counts()
+        fig, ax = plt.subplots(figsize=(6, 6))
+        ax.pie(stiffness_counts, labels=stiffness_counts.index, autopct='%1.1f%%',
+               colors=['#ff9999','#66b3ff'])
+        ax.set_title('Percentage of Farmers with Joint Stiffness')
+        st.pyplot(fig)
+    
+    with col2:
+        st.markdown("**Hand Numbness (NUMBNESS)**")
+        numbness_counts = df['NUMBNESS'].value_counts()
+        fig, ax = plt.subplots(figsize=(6, 6))
+        ax.pie(numbness_counts, labels=numbness_counts.index, autopct='%1.1f%%',
+               colors=['#ff9999','#66b3ff'])
+        ax.set_title('Percentage of Farmers with Hand Numbness')
+        st.pyplot(fig)
+    
+    # Statistical test for affected area
+    st.subheader("Statistical Analysis for Affected Area")
+    
+    # Perform ANOVA
+    groups = [df[df['AREA_LABEL'] == area]['NPRS'] for area in df['AREA_LABEL'].unique()]
+    f_stat, p_val = stats.f_oneway(*groups)
+    
+    st.markdown("**ANOVA Results for Affected Area vs Pain Score:**")
+    st.markdown(f"- F-statistic: {f_stat:.3f}")
+    st.markdown(f"- p-value: {p_val:.3f}")
+    if p_val < 0.05:
+        st.success("Statistically significant differences exist between affected areas (p < 0.05)")
+    else:
+        st.warning("No statistically significant differences found (p ≥ 0.05)")
 
 # Footer
 st.markdown("---")
