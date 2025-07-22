@@ -399,6 +399,51 @@ elif page == "🛡️ Recommendations":
 # New Work Patterns Page
 elif page == "⏱️ Work Patterns":
     st.header("⏱️ Work Pattern Analysis")
+
+
+    # Experience Level Graph
+    st.subheader("Experience Level Distribution")
+    experience_map = {
+        'A': 'Less than 1 year',
+        'B': '1-5 years',
+        'C': '6-10 years',
+        'D': 'More than 10 years'
+    }
+    
+    df['EXPERIENCE_LABEL'] = df['EXPERIENCE'].map(experience_map)
+    
+    fig_exp = px.histogram(df, x='EXPERIENCE_LABEL',
+                         category_orders={"EXPERIENCE_LABEL": ['Less than 1 year', '1-5 years', '6-10 years', 'More than 10 years']},
+                         title='Distribution of Farmers by Experience Level',
+                         labels={'EXPERIENCE_LABEL': 'Experience Level', 'count': 'Number of Farmers'},
+                         color='EXPERIENCE_LABEL',
+                         color_discrete_sequence=px.colors.qualitative.Pastel)
+    fig_exp.update_layout(showlegend=False)
+    fig_exp.update_traces(hovertemplate="Experience: %{x}<br>Count: %{y}")
+    st.plotly_chart(fig_exp, use_container_width=True)
+    
+    # Duration Level Graph
+    st.subheader("Daily Working Duration Distribution")
+    duration_map = {
+        'A': 'Less than 4 hours',
+        'B': '4-6 hours',
+        'C': '7-8 hours',
+        'D': 'More than 9 hours'
+    }
+    
+    df['HOURS_DAY_LABEL'] = df['HOURS_DAY'].map(duration_map)
+    
+    fig_dur = px.histogram(df, x='HOURS_DAY_LABEL',
+                          category_orders={"HOURS_DAY_LABEL": ['Less than 4 hours', '4-6 hours', '7-8 hours', 'More than 9 hours']},
+                          title='Distribution of Daily Working Hours',
+                          labels={'HOURS_DAY_LABEL': 'Hours per Day', 'count': 'Number of Farmers'},
+                          color='HOURS_DAY_LABEL',
+                          color_discrete_sequence=px.colors.qualitative.Pastel)
+    fig_dur.update_layout(showlegend=False)
+    fig_dur.update_traces(hovertemplate="Hours: %{x}<br>Count: %{y}")
+    st.plotly_chart(fig_dur, use_container_width=True)
+
+
     
     # Experience analysis
     st.subheader("Experience Level Analysis")
